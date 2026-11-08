@@ -1,0 +1,35 @@
+# Environment & Secrets
+.env
+*.env
+secrets.h
+firmware/**/secrets.h
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+venv/
+.venv/
+env/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Large Model Weights & Data
+*.pt
+*.onnx
+*.engine
+*.task
+*.mp4
+*.avi
+*.mkv
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

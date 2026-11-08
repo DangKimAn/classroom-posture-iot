@@ -1,0 +1,4 @@
+# Cursor AI Rules
+Always read and strictly follow `AGENTS.md` at the repository root.
+Refer to `docs/` for business logic, system flows, hard rules, and technical specifications.
+Strictly adhere to path-based module boundaries and immutable data contracts.

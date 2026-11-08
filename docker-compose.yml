@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  # MQTT Broker (Eclipse Mosquitto) phuc vu trao doi ban tin giua TV2 va TV3
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: iot_posture_mqtt
+    restart: unless-stopped
+    ports:
+      - "1883:1883"   # MQTT Port mac dinh
+      - "9001:9001"   # MQTT over WebSockets
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
