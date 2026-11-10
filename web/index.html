@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080c14">
+  <title>Ứng dụng IoT vào mô hình phát hiện tư thế ngồi của sinh viên trong lớp học</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="dashboard">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M7 18.5v-5.2a4.9 4.9 0 0 1 9.8 0v5.2M4.5 19h15M12 4v2.4M7.2 6.2l1.6 1.6m8-1.6-1.6 1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="10.5" r="2.1" stroke="currentColor" stroke-width="1.7"/></svg>
+        </div>
+        <div>
+          <h1>Ứng dụng IoT vào mô hình phát hiện tư thế ngồi của sinh viên trong lớp học</h1>
+          <p>Dashboard theo dõi trạng thái tư thế theo vị trí</p>
+        </div>
+      </div>
+      <div class="topbar-meta">
+        <div id="connection" class="connection pending"><span class="connection-dot"></span><span>Đang kết nối</span></div>
+        <span class="live-label"><span class="live-dot"></span>Tự làm mới mỗi 2 giây</span>
+      </div>
+    </header>
+
+    <section class="metric-grid" aria-label="Tổng quan hệ thống">
+      <article class="metric-card metric-blue">
+        <div class="metric-heading"><span>A) KẾT NỐI DỊCH VỤ</span><span class="metric-icon">⌁</span></div>
+        <strong id="api-metric" class="metric-value">—</strong>
+        <div id="api-caption" class="metric-caption">Đang kiểm tra API</div>
+      </article>
+      <article class="metric-card metric-violet">
+        <div class="metric-heading"><span>B) VỊ TRÍ CÓ DỮ LIỆU</span><span class="metric-icon">▦</span></div>
+        <strong id="seat-count" class="metric-value">—</strong>
+        <div class="metric-caption">Vị trí có sự kiện mới nhất</div>
+      </article>
+      <article class="metric-card metric-amber">
+        <div class="metric-heading"><span>SỰ KIỆN KHỚP BỘ LỌC</span><span class="metric-icon">◷</span></div>
+        <strong id="event-count" class="metric-value">—</strong>
+        <div class="metric-caption">Tối đa 100 sự kiện gần đây</div>
+      </article>
+    </section>
+
+    <section class="summary-grid" aria-label="Phân bố tư thế mới nhất">
+      <article class="summary-card"><span id="label-upright" class="summary-label">TƯ THẾ THẲNG</span><strong id="count-upright">0</strong><span class="summary-symbol symbol-blue">↗</span><div class="summary-bar" role="meter" aria-labelledby="label-upright" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0"><span id="bar-upright" class="bar-blue"></span></div></article>
+      <article class="summary-card"><span id="label-slouching" class="summary-label">TƯ THẾ CÚI</span><strong id="count-slouching">0</strong><span class="summary-symbol symbol-violet">⌁</span><div class="summary-bar" role="meter" aria-labelledby="label-slouching" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0"><span id="bar-slouching" class="bar-violet"></span></div></article>
+      <article class="summary-card"><span id="label-leaning" class="summary-label">TƯ THẾ NGHIÊNG</span><strong id="count-leaning">0</strong><span class="summary-symbol symbol-green">◒</span><div class="summary-bar" role="meter" aria-labelledby="label-leaning" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0"><span id="bar-leaning" class="bar-green"></span></div></article>
+      <article class="summary-card"><span id="label-unknown" class="summary-label">CHƯA XÁC ĐỊNH</span><strong id="count-unknown">0</strong><span class="summary-symbol symbol-amber">?</span><div class="summary-bar" role="meter" aria-labelledby="label-unknown" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0"><span id="bar-unknown" class="bar-amber"></span></div></article>
+    </section>
+
+    <section class="content-grid">
+      <article class="panel overview-panel">
+        <div class="panel-heading">
+          <div><h2>Trạng thái theo vị trí</h2><p>Cập nhật mới nhất cho từng mã ghế</p></div>
+          <span class="panel-icon" aria-hidden="true">▦</span>
+        </div>
+        <div id="seat-map" class="seat-map" aria-live="polite">
+          <div class="empty-state"><span class="empty-icon">⌁</span><strong>Đang chờ dữ liệu</strong><p>Khi backend nhận sự kiện, trạng thái từng vị trí sẽ xuất hiện tại đây.</p></div>
+        </div>
+        <div class="privacy-note"><span class="privacy-icon">◇</span><div><strong>Xử lý tôn trọng quyền riêng tư</strong><p>Dashboard chỉ nhận mã vị trí và kết quả tư thế; không hiển thị hoặc lưu ảnh/video.</p></div></div>
+      </article>
+
+      <article class="panel events-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">DÒNG SỰ KIỆN</p><h2>Lịch sử tư thế</h2><p>Các sự kiện mới nhất từ hệ thống</p></div>
+          <span class="panel-icon clock-icon" aria-hidden="true">◷</span>
+        </div>
+        <form id="filters" class="filters">
+          <label class="seat-filter">Mã vị trí<input name="seat_id" list="seat-options" maxlength="32" placeholder="Tất cả vị trí"><datalist id="seat-options"></datalist></label>
+          <div class="date-filters">
+            <label>Từ (UTC)<input name="from" type="datetime-local"></label>
+            <label>Đến (UTC)<input name="to" type="datetime-local"></label>
+          </div>
+          <div class="filter-actions"><button type="submit">Áp dụng lọc</button><button type="reset" class="reset-button" aria-label="Xóa bộ lọc">Xóa</button></div>
+        </form>
+        <div id="history" class="event-list" aria-live="polite"><p class="empty-inline">Đang tải sự kiện…</p></div>
+        <div class="panel-footer"><span id="history-caption">Đang tải dữ liệu</span><span class="refresh-indicator"><i></i> Làm mới mỗi 2 giây</span></div>
+      </article>
+    </section>
+    <footer class="page-footer"><span>HỆ THỐNG PHÁT HIỆN TƯ THẾ NGỒI · ĐỒ ÁN IoT</span><span>Dữ liệu thời gian UTC</span></footer>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>
