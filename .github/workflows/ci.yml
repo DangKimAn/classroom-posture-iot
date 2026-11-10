@@ -26,7 +26,7 @@ jobs:
 
       - name: Run Backend and Dashboard Tests
         run: |
-          pytest tests/test_backend.py tests/test_infra_config.py tests/test_subscriber_ack.py tests/test_validator.py tests/test_web_accessibility.py
+          python -m pytest tests/test_backend.py tests/test_infra_config.py tests/test_subscriber_ack.py tests/test_validator.py tests/test_web_accessibility.py
 
       - name: Security Check - Ensure No Secrets Committed
         run: |
