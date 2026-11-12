@@ -22,11 +22,11 @@ jobs:
       - name: Install Test Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest paho-mqtt pydantic
+          pip install -r backend/requirements-dev.txt
 
-      - name: Run Unit Tests (Validator & Classifier)
+      - name: Run Backend and Dashboard Tests
         run: |
-          pytest tests/
+          python -m pytest tests/test_backend.py tests/test_infra_config.py tests/test_subscriber_ack.py tests/test_validator.py tests/test_web_accessibility.py
 
       - name: Security Check - Ensure No Secrets Committed
         run: |

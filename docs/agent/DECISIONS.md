@@ -12,7 +12,7 @@ Quy tắc cho agent: mục `OPEN` **không do agent tự chốt**. Dùng giá tr
 | D-04 | Tín hiệu "mất kết nối" cho dashboard | Cách (a): quá N giây không có event; cách (b): topic heartbeat + MQTT Last Will (cần đổi hợp đồng) | OPEN |
 | D-05 | Cổng và đường dẫn của stream (ví dụ cổng 81 `/stream`) | Ghi theo firmware thực tế vào `docs/stream_contract.md` | OPEN |
 | D-06 | Polling hay WebSocket cho MVP | Polling (đơn giản hơn) | OPEN |
-| D-07 | Stack backend và CSDL | Nhóm chọn một lần ở tuần 1; ưu tiên thứ nhóm đã quen | OPEN |
+| D-07 | Stack backend và CSDL | PostgreSQL; backend Python kết nối qua Psycopg 3 | DECIDED (2026-11-09, người dùng chọn) |
 | D-08 | Độ dài báo cáo (khoảng 40–60 trang theo ghi chú ảnh) | Xác nhận với giảng viên | OPEN |
 | D-09 | Độ phân giải/FPS mặc định | Chốt sau đo ở tuần 3 | OPEN |
 | D-10 | QoS, retain của MQTT; chu kỳ gửi hay gửi khi nhãn đổi | QoS 1, không retain; cấu hình được | OPEN |
@@ -27,3 +27,5 @@ Quy tắc cho agent: mục `OPEN` **không do agent tự chốt**. Dùng giá tr
 ## Nhật ký quyết định (ADR ngắn)
 Thêm dòng mới ở cuối theo mẫu:
 `YYYY-MM-DD | ID | Quyết định | Lý do | Người chốt`
+
+2026-11-09 | D-07 | Chọn PostgreSQL làm CSDL backend | Người dùng chọn PostgreSQL; phù hợp lưu event tập trung khi tích hợp | Người dùng (TV3)

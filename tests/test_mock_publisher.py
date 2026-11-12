@@ -13,12 +13,6 @@ import uuid
 import datetime
 import random
 
-try:
-    import paho.mqtt.client as mqtt
-except ImportError:
-    print("Vui long cai dat: pip install paho-mqtt")
-    sys.exit(1)
-
 MQTT_HOST = os.getenv("MQTT_HOST", "localhost")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
 MQTT_TOPIC = os.getenv("MQTT_TOPIC", "classroom/posture/events")
@@ -44,6 +38,11 @@ def generate_mock_event(seat_id, force_label=None):
     }
 
 def main():
+    try:
+        import paho.mqtt.client as mqtt
+    except ImportError:
+        print("Vui long cai dat: pip install -r backend/requirements.txt")
+        sys.exit(1)
     print(f"[Mock Publisher] Dang ket noi broker {MQTT_HOST}:{MQTT_PORT}...")
     client = mqtt.Client(client_id=f"mock_pub_{uuid.uuid4().hex[:6]}")
     client.connect(MQTT_HOST, MQTT_PORT, keepalive=60)
