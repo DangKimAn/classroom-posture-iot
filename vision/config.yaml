@@ -1,0 +1,13 @@
+model:
+  name: yolov8n-pose.pt
+  keypoint_confidence: 0.5
+classifier:
+  upright_max: 15.0
+  leaning_min: 20.0
+  slouching_min: 25.0
+  smoothing_window: 5
+publisher:
+  interval_seconds: 1.0
+  publish_on_change: true
+seat_regions: []
+
