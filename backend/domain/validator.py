@@ -1,16 +1,13 @@
 """Validate incoming posture events against the proposed project contract."""
 
-from datetime import datetime
 import json
 import math
 import re
 from typing import Any
 from uuid import UUID
 
-MAX_PAYLOAD_BYTES = 16_384
-MAX_POSTGRES_REAL = 3.4028234663852886e38
-LABELS = {"upright", "slouching", "leaning", "unknown"}
-REQUIRED_FIELDS = {"event_id", "ts", "seat_id", "label", "confidence", "model", "angles"}
+from backend.domain.contract import LABELS, MAX_PAYLOAD_BYTES, MAX_POSTGRES_REAL, REQUIRED_FIELDS
+from backend.domain.timeutil import is_utc, parse_iso8601
 
 
 def validate_event_payload(payload: Any) -> tuple[bool, str, dict[str, Any] | None]:
@@ -30,10 +27,10 @@ def validate_event_payload(payload: Any) -> tuple[bool, str, dict[str, Any] | No
     if not isinstance(ts, str):
         return False, "ts must be an ISO-8601 UTC timestamp", None
     try:
-        parsed_ts = datetime.fromisoformat(ts[:-1] + "+00:00" if ts.endswith("Z") else ts)
+        parsed_ts = parse_iso8601(ts)
     except ValueError:
         return False, "ts must be an ISO-8601 UTC timestamp", None
-    if parsed_ts.tzinfo is None or parsed_ts.utcoffset().total_seconds() != 0:
+    if not is_utc(parsed_ts):
         return False, "ts must use the UTC timezone", None
     seat_id = payload["seat_id"]
     if not isinstance(seat_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,32}", seat_id):
