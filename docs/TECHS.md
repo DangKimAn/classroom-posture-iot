@@ -27,9 +27,9 @@ graph LR
     end
 
     subgraph L4 ["4. Tầng Backend & Dữ Liệu"]
-        FAST["Python 3.10+ / FastAPI<br/>REST API & Static Host"]
-        PAHO["Paho-MQTT 1.6+<br/>Auto-reconnect Client"]
-        SQL["SQLite 3 / PostgreSQL<br/>Indexed & Deduplicated"]
+        FAST["Python 3.10+ / http.server<br/>REST API"]
+        PAHO["Paho-MQTT<br/>MQTT client"]
+        SQL["PostgreSQL / Psycopg 3<br/>Deduplicate event_id"]
     end
 
     subgraph L5 ["5. Tầng Giao Diện & Trực Quan"]
@@ -45,37 +45,36 @@ graph LR
 
 ### 2.1. Tầng Phần Cứng (Hardware Layer)
 - **Module vi điều khiển & Camera**: **AI-Thinker ESP32-CAM (Cảm biến OmniVision OV2640 2 Megapixel)**.
-  - *Lý do chọn*: Giá thành rất rẻ (~100.000 VNĐ), tích hợp sẵn Wi-Fi và Bluetooth, có bộ nhớ PSRAM ngoài 4MB đủ sức chạy bộ đệm ảnh kép.
+  - Tài liệu này không ghi giá hoặc kết quả hiệu năng phần cứng vì chưa có phép đo/nguồn được xác nhận cho môi trường demo.
   - *Kỹ thuật tối ưu đã áp dụng*:
     - Xung nhịp cảm biến tăng lên **20MHz** (`xclk_freq_hz = 20000000`) để quét frame nhanh nhất.
     - Cấp phát 2 bộ đệm khung hình DMA (`fb_count = 2`, chế độ `CAMERA_GRAB_LATEST`) cho phép vừa truyền frame này qua mạng vừa thu nhận frame tiếp theo.
     - Tắt thanh ghi Brownout detector để chống sập nguồn khi dòng phát Wi-Fi đạt đỉnh 500mA.
-  - *Độ phân giải & FPS*: VGA (640x480) hoặc CIF (400x296), chất lượng nén JPEG mức 12 đạt tốc độ 20–30 FPS ổn định.
+  - Độ phân giải và FPS mặc định vẫn chờ đo/chốt theo D-09; chưa có kết quả đo được ghi tại đây.
 
 ### 2.2. Tầng Truyền Thông Mạng (Network & Protocols)
-- **Wi-Fi**: Chuẩn 802.11 b/g/n, chế độ không ngủ (`WiFi.setSleep(false)`) giữ độ trễ truyền gói tin dưới 30ms.
+- **Wi-Fi**: Chuẩn 802.11 b/g/n; độ trễ thực tế chưa được đo.
 - **Truyền video (Camera → AI)**: **MJPEG qua HTTP Streaming**.
-  - *Lý do chọn*: ESP32-CAM phát MJPEG tiêu thụ rất ít RAM/CPU (không cần thuật toán nén H.264 phức tạp), độ trễ dưới 50ms, trình duyệt và OpenCV đọc trực tiếp được mà không cần cài thêm driver.
+  - ESP32-CAM phát MJPEG; OpenCV có thể đọc HTTP stream. Độ trễ và mức sử dụng tài nguyên chưa được đo.
 - **Truyền bản tin sự kiện (AI → Backend)**: **MQTT 3.1.1 (Broker Eclipse Mosquitto)**.
   - *Lý do chọn*: Kiến trúc Publish/Subscribe tách biệt hoàn toàn module Vision và Backend. Băng thông cực nhẹ (gói JSON ~200 bytes), hỗ trợ QoS 1 đảm bảo không mất sự kiện khi mạng lớp học chập chờn.
 
 ### 2.3. Tầng Thị Giác Máy Tính & Trí Tuệ Nhân Tạo (AI / CV)
 - **Thư viện nền tảng**: **OpenCV (Python)** với kiến trúc đọc đa luồng (Bufferless Threading) ngăn chặn việc video bị tích luỹ trong hàng đợi gây trễ hình.
 - **Mô hình Pose Estimation**: **YOLOv8 Pose (Ultralytics - `yolov8n-pose.pt`)**.
-  - *Lý do chọn*: Phiên bản Nano cực nhẹ (~6MB), tốc độ suy luận nhanh (30+ FPS trên GPU phổ thông, 10–15 FPS trên CPU), nhận diện đồng thời nhiều sinh viên trong cùng 1 khung hình tốt hơn MediaPipe đơn người.
+  - Cấu hình hiện đặt model `yolov8n-pose.pt`; tốc độ suy luận và độ chính xác chưa được đo trên thiết bị demo.
 - **Thuật toán phân loại**:
   - Tính góc nghiêng thân $\theta = \arctan\left(\frac{|\Delta x|}{|\Delta y|}\right) \times \frac{180}{\pi}$ từ trung điểm vai tới trung điểm hông so với phương thẳng đứng.
-  - Bộ lọc làm mượt thời gian (Temporal Majority Voting) trên cửa sổ 5 khung hình liên tiếp để lọc nhiễu giật nhãn do rung lắc khung xương.
+  - Bộ lọc làm mượt thời gian (Temporal Majority Voting) dùng cửa sổ cấu hình trong `vision/config.yaml`; góc không tính được trả nhãn `unknown` thay vì giữ nhãn cũ.
 
 ### 2.4. Tầng Dữ Liệu & Backend (Backend & Data Layer)
-- **Ngôn ngữ & Framework**: **Python 3.10+ kết hợp FastAPI & Uvicorn**.
-  - *Lý do chọn*: Xử lý bất đồng bộ (Async I/O) hiệu năng cao, tự động sinh tài liệu Swagger UI chuẩn (`/docs`), tích hợp liền mạch với Paho-MQTT.
-- **Cơ sở dữ liệu**: **SQLite 3** (mặc định) / **PostgreSQL** (mở rộng).
-  - *Lý do chọn*: SQLite lưu gọn trong file `backend/posture.db`, không phụ thuộc daemon, có chỉ mục kép B-Tree (`idx_posture_ts`, `idx_posture_seat_ts`) cho tốc độ truy vấn mili-giây.
+- **Ngôn ngữ & HTTP server**: **Python 3.10+ và `http.server.ThreadingHTTPServer`**.
+  - API hiện đăng ký `GET /api/events/latest` và `GET /api/events`; không có `/api/health`.
+- **Cơ sở dữ liệu**: **PostgreSQL với Psycopg 3** (D-07 đã chốt).
+  - Bảng `posture_events` được tạo qua migrations. Repository chèn bằng `INSERT ... ON CONFLICT (event_id) DO NOTHING RETURNING event_id` để loại event trùng.
 
 ### 2.5. Tầng Giao Diện Người Dùng (Frontend Dashboard)
-- **Công nghệ**: **HTML5, Modern CSS3 (Grid/Flexbox, Dark theme), Vanilla JavaScript**.
-  - *Lý do chọn*: Không cần build tool nặng nề (Webpack/Vite), tải trang tức thì, dễ dàng tùy biến thẻ ghế trực quan, cập nhật dữ liệu tự động bằng Polling REST API mỗi 2 giây.
+- **Công nghệ**: **HTML5, CSS3, Vanilla JavaScript**. Dashboard polling REST API theo chu kỳ 2 giây hiện được đặt trong `web/app.js`.
 
 ### 2.6. Tầng Tự Động Hóa & DevOps (DevOps & Testing)
 - **Docker & Docker Compose**: Đóng gói sẵn dịch vụ Eclipse Mosquitto MQTT Broker.
@@ -91,7 +90,5 @@ graph LR
 | `ultralytics` | `>= 8.0.0` | `vision/` | Mô hình YOLOv8 Pose |
 | `opencv-python` | `>= 4.8.0` | `vision/` | Đọc video, xử lý hình ảnh |
 | `paho-mqtt` | `>= 1.6.1` | `vision/`, `backend/`, `tests/` | MQTT Publisher / Subscriber |
-| `fastapi` | `>= 0.100.0` | `backend/` | REST API service |
-| `uvicorn` | `>= 0.23.0` | `backend/` | ASGI Server chạy FastAPI |
-| `pydantic` | `>= 2.0.0` | `backend/` | Kiểm tra dữ liệu API |
+| `psycopg` | `>= 3` | `backend/` | Kết nối PostgreSQL |
 | `pytest` | `>= 7.0.0` | `tests/` | Unit testing tự động |

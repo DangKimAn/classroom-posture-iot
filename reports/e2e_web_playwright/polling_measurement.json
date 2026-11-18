@@ -1,0 +1,9 @@
+{
+  "window_seconds": 10.012,
+  "api_requests": 10,
+  "by_endpoint": {
+    "/api/events": 5,
+    "/api/events/latest": 5
+  },
+  "boundary_policy": "monotonic timestamps inclusive at both boundaries; page-load requests before window excluded"
+}

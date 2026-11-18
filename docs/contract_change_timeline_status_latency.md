@@ -54,7 +54,7 @@ Tham số: `from`, `to`, `seat_id` tùy chọn. Response đề xuất:
 }
 ```
 
-`latency_ms = received_at - ts`. Chỉ số chỉ có ý nghĩa khi đồng hồ vision và backend được đồng bộ. Event có timestamp tương lai hoặc độ lệch âm cần được loại khỏi thống kê latency và đếm riêng hoặc báo rõ trong metadata. Đây là thời gian từ lúc vision tạo event đến khi backend nhận; không đại diện độ trễ từ lúc camera chụp đến khi dashboard render.
+`latency_ms = received_at - ts`. Chỉ số chỉ có ý nghĩa khi đồng hồ Vision và backend được đồng bộ; `ts` lấy từ đồng hồ nguồn nên có thể lệch. Nếu `ts > received_at`, ghi nhận là timestamp tương lai/latency âm, loại khỏi thống kê latency hợp lệ và đếm riêng; không clamp thành 0. Dữ liệu có `received_at = NULL` là dữ liệu cũ không xác định và không đưa vào thống kê. Latency dương vẫn có thể sai do lệch đồng hồ. Chỉ số này không đại diện độ trễ từ lúc camera chụp đến khi dashboard render.
 
 ### 2.4 `GET /api/health`
 
@@ -66,42 +66,52 @@ Thêm migration `002_add_received_at.sql`:
 
 ```sql
 ALTER TABLE posture_events
-ADD COLUMN IF NOT EXISTS received_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ADD COLUMN IF NOT EXISTS received_at TIMESTAMPTZ NULL;
 ```
 
-Giá trị mặc định hỗ trợ các dòng dữ liệu đã có trước migration. Với dữ liệu cũ, `received_at` là thời điểm áp dụng migration, không phải thời điểm nhận thật; các thống kê độ trễ cũ cần được loại trừ hoặc đánh dấu không xác định.
+Không đặt `DEFAULT` và không backfill cột này: mọi dòng đã tồn tại trước migration giữ `received_at = NULL`, nghĩa là thời điểm nhận không xác định. Với event mới, backend ghi `received_at` do PostgreSQL cấp bằng `clock_timestamp()` trong cùng câu lệnh `INSERT`, tại lúc câu lệnh insert chạy sau khi backend nhận MQTT và bắt đầu lưu event. `age_seconds` là `NULL` khi `received_at` là `NULL`; không suy diễn timestamp nhận từ `ts`.
+
+### 2.6 Yêu cầu kiểm chứng và phân biệt trạng thái
+
+- Yêu cầu tương thích: chạy validator trên Python 3.12 với event tổng hợp có timestamp mili-giây, ví dụ `2026-11-17T12:00:00.123Z`. Trên Python 3.14.3, validator chấp nhận timestamp này. Máy kiểm thử không có Python 3.12, nên kết quả trên Python 3.12 **chưa kiểm chứng**.
+- “Không có pose” nghĩa là không phát hiện/không gán được pose cho ghế trong frame; theo luồng hiện tại, trường hợp đó không tạo event. `unknown` là nhãn event riêng, dùng khi có pose được gán nhưng góc thân không đo được hoặc phân loại không đủ chắc chắn. Không đồng nhất thiếu event với nhãn `unknown`.
+- Dữ liệu cũ có `received_at = NULL` không có tuổi nhận đáng tin cậy. Không dùng `ts` để giả lập thời điểm nhận.
 
 ## 3. Phương án trạng thái pipeline
 
-### Phương án A: Event định kỳ làm heartbeat
+### Phương án A: Event định kỳ theo ghế
 
 TV2 gửi event cho mỗi ghế mỗi 2 giây, kể cả nhãn `unknown`, đồng thời gửi ngay khi nhãn sau làm mượt thay đổi. Dashboard đánh dấu stale sau khoảng 3–5 chu kỳ, tương đương 6–10 giây ở chu kỳ 2 giây.
 
-- **Ưu:** Không thêm topic hoặc schema MQTT; có freshness theo từng ghế; triển khai đơn giản.
-- **Nhược:** Tăng lưu lượng, số dòng DB và event lặp; cần bảo đảm publisher thực sự gửi định kỳ.
+- **Ưu:** Không thêm topic hoặc schema MQTT; có freshness theo từng ghế.
+- **Nhược:** Vision hiện chỉ phát event khi có pose trong vùng ghế. Ghế trống và pipeline dừng vì vậy không tạo event, trông giống nhau. Chỉ dùng A không thể phân biệt phòng trống với pipeline chết. Gửi lặp cũng tăng lưu lượng và số dòng DB.
 
-### Phương án B: Topic trạng thái riêng và Last Will
+### Phương án B tối thiểu: Topic trạng thái và Last Will
 
-Thêm topic `classroom/posture/status`, retained, QoS 1 và cấu hình MQTT Last Will. Schema gợi ý:
+Thêm topic `classroom/posture/status`, retained, QoS 1 và cấu hình MQTT Last Will. Vision gửi heartbeat online theo chu kỳ cố định; broker gửi trạng thái offline theo Last Will khi kết nối MQTT bị mất. Payload tối thiểu:
 
 ```json
 {
   "source": "vision",
   "state": "online",
-  "camera": "connected",
-  "ts": "2026-11-10T03:12:45Z",
-  "fps": 8.0
+  "ts": "2026-11-10T03:12:45Z"
 }
 ```
 
-Last Will phát `state: offline` khi broker phát hiện kết nối MQTT bị mất. Cần chốt schema cho trạng thái tắt bình thường, timestamp, ý nghĩa `fps`, chu kỳ heartbeat và trạng thái khi camera mất nhưng tiến trình vision vẫn chạy.
+Last Will dùng cùng schema với `state: offline`. Đề xuất ban đầu: heartbeat mỗi **5 giây**, pipeline status stale sau **15 giây** mà không có heartbeat. Các giá trị này chỉ để nhóm xem xét, chưa được chốt. Tín hiệu này phản ánh tiến trình Vision kết nối MQTT; nó không tự xác nhận camera đang cấp khung hình.
 
-- **Ưu:** Tách trạng thái dịch vụ khỏi event tư thế; có thể phân biệt pipeline offline với trạng thái camera nếu các tín hiệu được định nghĩa rõ.
-- **Nhược:** Thêm topic, schema và luồng xử lý cho cả TV2 và TV3; retained status chỉ cho biết giá trị cuối cùng và cần quy tắc phát hiện dữ liệu quá cũ.
+**Phương án B đầy đủ** có thể bổ sung trạng thái camera, FPS và trạng thái tắt bình thường. Những trường đó cần định nghĩa nguồn đo, ý nghĩa, và xử lý khi tiến trình còn sống nhưng camera mất kết nối. B tối thiểu không khẳng định trạng thái camera; B đầy đủ có thêm thông tin nhưng tăng schema và công việc tích hợp.
 
 ### Khuyến nghị để nhóm xem xét
 
-Dùng phương án A làm nền cho freshness theo từng ghế. Chỉ bổ sung phương án B nếu nhóm cần phân biệt rõ camera mất kết nối với tiến trình vision chết. Hai phương án có thể kết hợp, nhưng cần tránh ghi event heartbeat vào lịch sử như event đổi nhãn nếu nhóm muốn giảm dung lượng.
+Kết hợp A để xác định freshness từng ghế với B tối thiểu để phân biệt trạng thái phòng không có event mới với Vision không online. Không ghi heartbeat vào `posture_events` như event tư thế. Chỉ mở rộng thành B đầy đủ nếu nhóm cần tín hiệu riêng cho camera/FPS.
+
+### Định nghĩa trạng thái ghế và tỷ lệ tư thế
+
+- **Ghế đang có người (theo tín hiệu hệ thống):** có event mới nhất với `age_seconds <= N` và pipeline status đang online, chưa stale. Đề xuất ban đầu cho `N` là **10 giây**; nhóm cần chốt giá trị này cùng chu kỳ gửi event.
+- Event cũ hơn N giây được đánh dấu stale/vắng và không tính vào tổng ghế đang có người hoặc thống kê tư thế hiện tại.
+- Tỷ lệ tư thế xấu tính trên ghế đang có người có nhãn xác định: `(slouching + leaning) / (upright + slouching + leaning)`. Nhãn `unknown` không vào mẫu số và phải được báo riêng (số lượng hoặc tỷ lệ unknown) để người xem biết mức thiếu dữ liệu.
+- Nếu pipeline stale/offline, trạng thái ghế hiện tại không được diễn giải là phòng trống.
 
 ## 4. Tác động, công việc và tiêu chí chấp nhận
 
@@ -123,12 +133,28 @@ Tiêu chí chấp nhận đề xuất:
 
 ### Câu hỏi nhóm cần chốt
 
-1. Chọn phương án A, B hay kết hợp? Nhịp event/heartbeat và ngưỡng stale chính xác là bao nhiêu?
+1. Chọn phương án A, B tối thiểu, B đầy đủ hay kết hợp? Chốt N cho event ghế và chu kỳ heartbeat/stale của pipeline là bao nhiêu? Giá trị đề xuất hiện tại: N=10 giây, heartbeat=5 giây, status stale=15 giây.
 2. Giới hạn khoảng thời gian và số bucket của timeline là bao nhiêu? Bucket minute có đủ cho demo?
 3. Event có timestamp tương lai hoặc latency âm được loại, đếm riêng hay trả thêm metadata?
 4. `/api/health` chỉ kiểm tra DB hay phải kiểm tra thêm subscriber/broker?
 5. Với phương án B, ai là nguồn xác định trạng thái camera; payload Last Will và trạng thái graceful shutdown dùng cùng schema nào?
+6. **D-04 — trạng thái pipeline/occupancy:** chọn chỉ suy ra freshness từ event, thêm topic status/Last Will, hay kết hợp? Mặc định đề xuất trong tài liệu này là kết hợp event theo ghế với status tối thiểu; các ngưỡng đề xuất 10 giây cho event, heartbeat 5 giây và stale 15 giây vẫn cần nhóm duyệt.
+7. **D-06 — cập nhật dashboard:** chọn polling hay WebSocket? Mặc định đề xuất là polling; chu kỳ cụ thể cần nhóm chốt.
+8. **D-10 — truyền và lưu hàng đợi MQTT:** chốt QoS, retain, persistence và mức mất event tối đa chấp nhận được? Mặc định đề xuất là QoS 1, không retain, persistence bật với autosave 30 giây; phép thử hard kill đã mất 0/5 event trước autosave nên cần nhóm xác nhận cửa sổ rủi ro này trước khi triển khai.
 
 ## 5. Phạm vi và phê duyệt
 
 Tài liệu này chỉ là đề xuất. Không triển khai migration, endpoint, trường response, topic, schema status hoặc code dashboard thuộc Phần B cho đến khi PR hợp đồng được cả ba thành viên duyệt và merge. Sau đó mỗi module cập nhật code trong PR riêng.
+
+## Mẫu issue đề xuất hợp đồng
+
+```text
+Tiêu đề: [contract] Thêm freshness ghế và trạng thái pipeline cho dashboard
+Vấn đề: API hiện không có tuổi event, và khi Vision chỉ phát event theo pose thì ghế trống không phân biệt được với pipeline dừng.
+Trước: API latest không có received_at/age_seconds; MQTT chỉ có topic events; dashboard không có tín hiệu pipeline.
+Sau: Bổ sung received_at/age_seconds, timeline/latency/health; cân nhắc topic status retained QoS 1 với Last Will và payload tối thiểu source/state/ts. Đề xuất N=10 giây, heartbeat=5 giây, stale=15 giây; các giá trị cần nhóm chốt.
+Module bị ảnh hưởng: vision, backend, web.
+Tương thích ngược: Trường API được bổ sung; topic status là luồng mới và không đổi payload/topic events hiện hành.
+Phương án khác: Chỉ dùng event định kỳ theo ghế; cách này không phân biệt được phòng trống với pipeline chết.
+Cần duyệt: cả nhóm (TV1, TV2, TV3); chưa được xem là đã duyệt.
+```

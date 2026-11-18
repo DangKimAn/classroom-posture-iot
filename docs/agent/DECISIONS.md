@@ -16,6 +16,7 @@ Quy tắc cho agent: mục `OPEN` **không do agent tự chốt**. Dùng giá tr
 | D-08 | Độ dài báo cáo (khoảng 40–60 trang theo ghi chú ảnh) | Xác nhận với giảng viên | OPEN |
 | D-09 | Độ phân giải/FPS mặc định | Chốt sau đo ở tuần 3 | OPEN |
 | D-10 | QoS, retain của MQTT; chu kỳ gửi hay gửi khi nhãn đổi | QoS 1, không retain; cấu hình được | OPEN |
+| D-11 | Độ dài tối thiểu của `MQTT_PASSWORD` cho broker | Tối thiểu 12 ký tự; tiếp tục từ chối placeholder | DECIDED (2026-11-19, người dùng chọn) |
 
 ## Đã chốt (từ tài liệu phân công)
 - Ba khối module và cấu trúc thư mục như `ARCHITECTURE.md`.
@@ -29,3 +30,4 @@ Thêm dòng mới ở cuối theo mẫu:
 `YYYY-MM-DD | ID | Quyết định | Lý do | Người chốt`
 
 2026-11-09 | D-07 | Chọn PostgreSQL làm CSDL backend | Người dùng chọn PostgreSQL; phù hợp lưu event tập trung khi tích hợp | Người dùng (TV3)
+2026-11-19 | D-11 | MQTT_PASSWORD tối thiểu 12 ký tự và không chấp nhận placeholder | Tăng an toàn thông tin cấu hình broker | Người dùng

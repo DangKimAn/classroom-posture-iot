@@ -17,7 +17,7 @@ flowchart TD
         HTTP_SRV -- "MJPEG Stream (HTTP/LAN)" --> CAP["VideoCaptureStream<br/>(Bufferless Reader)"]
         CAP --> YOLO["YOLOv8 Pose<br/>(Inference 17 Keypoints)"]
         YOLO --> ANG["Tính góc Trunk Angle<br/>(Vector Vai-Hông / Vai-Tai)"]
-        ANG --> CLF["Classifier & Smoothing<br/>(Cửa sổ làm mượt N frames)"]
+        ANG --> CLF["Classifier & Smoothing<br/>(Góc thiếu: nhãn unknown)"]
         CLF --> PUB["MQTT Publisher<br/>(Paho Client)"]
     end
 
@@ -31,8 +31,8 @@ flowchart TD
         VAL -- "Sai schema" --> REJ["Log cảnh báo & Bỏ qua"]
         VAL -- "Hợp lệ" --> DEDUP{"Check event_id<br/>(Đã tồn tại?)"}
         DEDUP -- "Trùng" --> IGN["Bỏ qua (Deduplicated)"]
-        DEDUP -- "Mới" --> DB[("SQLite Database<br/>posture_events")]
-        DB --> API["FastAPI REST Service<br/>(/api/events/latest)"]
+        DEDUP -- "Mới" --> DB[("PostgreSQL<br/>posture_events")]
+        DB --> API["HTTPServer REST API<br/>(/api/events/latest)"]
     end
 
     subgraph FE ["5. Tầng Trực Quan Hóa (web/)"]
@@ -71,9 +71,9 @@ sequenceDiagram
         Ang->>Ang: Tính góc thân so với phương thẳng đứng
         Ang-->>Clf: Giá trị góc (độ)
         Clf->>Clf: Gán nhãn thô & Bỏ vào cửa sổ làm mượt (5 frames)
-        Clf-->>Pub: Nhãn đã làm mượt (upright/slouching/leaning)
+        Clf-->>Pub: Nhãn đã làm mượt (upright/slouching/leaning/unknown)
         alt Đủ chu kỳ gửi (1s) hoặc nhãn thay đổi
-            Pub->>Pub: Đóng gói JSON kèm event_id, UTC, seat_id
+            Pub->>Pub: Đóng gói JSON gồm event_id, UTC ts, seat_id, label, angles.trunk, confidence, model
             Pub->>Pub: Phát bản tin lên MQTT Broker (QoS 1)
         end
     end
@@ -83,12 +83,12 @@ sequenceDiagram
 1. `mqtt_subscriber.py` nhận bản tin nhị phân từ topic `classroom/posture/events`.
 2. Chuyển sang `validator.py`:
    - Kiểm tra định dạng JSON hợp lệ.
-   - Kiểm tra bắt buộc có đủ 6 trường: `event_id`, `ts`, `seat_id`, `label`, `confidence`, `model`.
+   - Kiểm tra đủ 7 trường: `event_id`, `ts`, `seat_id`, `label`, `angles`, `confidence`, `model`; `angles.trunk` có thể null chỉ khi nhãn là `unknown`.
    - Kiểm tra `label` nằm trong tập hợp hợp lệ `{"upright", "slouching", "leaning", "unknown"}`.
    - Kiểm tra `confidence` nằm trong khoảng $[0.0, 1.0]$.
-3. Nếu hợp lệ, gọi hàm `insert_event()` trong `database.py`:
-   - Thực thi `INSERT OR IGNORE INTO posture_events ...`.
-   - Nếu `event_id` đã có trong CSDL, câu lệnh tự động bỏ qua (loại bỏ lặp do QoS 1).
+3. Nếu hợp lệ, gọi repository `insert_event()`:
+   - Thực thi PostgreSQL `INSERT INTO posture_events ... ON CONFLICT (event_id) DO NOTHING RETURNING event_id`.
+   - Nếu không có dòng trả về, `event_id` đã tồn tại và event được tính là trùng (QoS 1 có thể giao lặp).
 
 ### Luồng 4: Hiển thị trực quan trên Web Dashboard (`web/`)
 1. Client tải trang `index.html`.
@@ -96,8 +96,8 @@ sequenceDiagram
    - Gửi yêu cầu `GET /api/events/latest`.
    - Nhận danh sách trạng thái mới nhất của các ghế.
    - Cập nhật màu sắc thẻ ghế và thông số góc trên giao diện DOM.
-3. Đồng thời mỗi 5 giây, gửi yêu cầu `GET /api/events?limit=20` để cập nhật bảng lịch sử sự kiện.
-4. Gửi yêu cầu `GET /api/health` để cập nhật tình trạng sống của Broker và Backend.
+3. Cùng chu kỳ refresh, gửi `GET /api/events?limit=100` để cập nhật lịch sử (giao diện chỉ hiển thị tối đa 8 dòng).
+4. UI phân biệt API khả dụng hay không qua kết quả gọi API. Đây không phải tín hiệu trạng thái camera, Vision hay broker; D-04 về stale vẫn đang chờ quyết định.
 
 ---
 
@@ -106,10 +106,10 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     E1["Mất kết nối Camera Stream<br/>(ESP32-CAM mất Wi-Fi/nguồn)"] --> R1["capture.py bắt lỗi đọc frame<br/>Sleep 0.5s -> Tự gọi _connect() thử lại"]
-    R1 --> S1["Gửi nhãn 'unknown' với confidence 0.0 lên MQTT"]
+    R1 --> S1["Frame lỗi bị bỏ qua; không phát event suy diễn trạng thái"]
 
-    E2["Mất kết nối MQTT Broker<br/>(Broker khởi động lại)"] --> R2["Paho MQTT tự động kích hoạt callback on_disconnect()<br/>Thực hiện reconnect_async ngầm"]
-    R2 --> S2["Khi Broker online, tự resubscribe topic mà không cần restart service"]
+    E2["Mất kết nối MQTT Broker<br/>(Broker khởi động lại)"] --> R2["Paho network loop của Vision duy trì client và thử kết nối lại"]
+    R2 --> S2["Vision tiếp tục publish khi callback báo kết nối lại"]
 
     E3["Bản tin MQTT sai cấu trúc / Lạ trường"] --> R3["validator.py phát hiện thiếu trường / sai kiểu"]
     R3 --> S3["Ghi log cảnh báo và drop bản tin, không ghi vào CSDL"]
