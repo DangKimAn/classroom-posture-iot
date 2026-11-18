@@ -45,6 +45,10 @@ class PostureClassifier:
         """Return ``(smoothed_label, raw_label)`` for one frame."""
         raw_label = self.classify_raw(angle)
         self._labels.append(raw_label)
+        if angle is None:
+            # A missing measurement invalidates the current label; historical
+            # votes must not be paired with a null angle in a new event.
+            return "unknown", raw_label
         counts = Counter(self._labels)
         # max preserves the latest occurrence as a deterministic tie-breaker.
         smoothed = max(reversed(self._labels), key=lambda label: counts[label])

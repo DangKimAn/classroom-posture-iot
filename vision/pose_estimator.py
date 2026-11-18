@@ -12,6 +12,7 @@ class Pose:
 
     keypoints: dict[str, tuple[float, float] | None]
     confidence: float
+    bbox: tuple[float, float, float, float] | None = None
 
 
 COCO_POINTS = {
@@ -47,6 +48,8 @@ class PoseEstimator:
                 continue
             xy_rows = keypoints.xy.cpu().tolist()
             confidence_rows = keypoints.conf.cpu().tolist() if keypoints.conf is not None else []
+            boxes = getattr(getattr(result, "boxes", None), "xyxy", None)
+            bbox_rows = boxes.cpu().tolist() if boxes is not None else []
             for index, row in enumerate(xy_rows):
                 confidences = confidence_rows[index] if index < len(confidence_rows) else []
                 selected: dict[str, tuple[float, float] | None] = {}
@@ -58,6 +61,11 @@ class PoseEstimator:
                         usable_confidences.append(confidence)
                     else:
                         selected[point_name] = None
-                poses.append(Pose(selected, sum(usable_confidences) / len(usable_confidences) if usable_confidences else 0.0))
+                bbox = tuple(float(value) for value in bbox_rows[index]) if index < len(bbox_rows) else None
+                poses.append(Pose(
+                    selected,
+                    sum(usable_confidences) / len(usable_confidences) if usable_confidences else 0.0,
+                    bbox,
+                ))
         return poses
 
