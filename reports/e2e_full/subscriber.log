@@ -1,0 +1,137 @@
+[mqtt] ready; subscribed topic=classroom/posture/events; mid=1
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] duplicate event ignored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] rejected message: angles.trunk may be null only when label is unknown
+[mqtt] rejected message: Missing required field: confidence
+[mqtt] rejected message: Unexpected field
+[mqtt] rejected message: event_id must be a UUID
+[mqtt] rejected message: ts must use the UTC timezone
+[mqtt] rejected message: seat_id must be a 1-32 character location code
+[mqtt] rejected message: seat_id must be a 1-32 character location code
+[mqtt] rejected message: Invalid label
+[mqtt] rejected message: confidence must be a finite number from 0 to 1
+[mqtt] rejected message: confidence must be a finite number from 0 to 1
+[mqtt] rejected message: confidence must be a finite number from 0 to 1
+[mqtt] rejected message: confidence must be a finite number from 0 to 1
+[mqtt] rejected message: angles.trunk must be a finite degree value or null
+[mqtt] rejected message: angles.trunk must be a finite degree value or null
+[mqtt] rejected message: Payload is not valid UTF-8 JSON
+[mqtt] rejected message: Payload is not valid UTF-8 JSON
+[mqtt] rejected message: Payload exceeds maximum size
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] disconnected: reason=Unspecified error; reconnect will be attempted
+[mqtt] ready; subscribed topic=classroom/posture/events; mid=2
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] summary stored=60 duplicate=1 invalid=17 temporary_error=0
+[mqtt] storage unavailable after retries: ConnectionTimeout
+[mqtt] disconnected: reason=Normal disconnection; reconnect will be attempted
+[mqtt] reconnecting in 3s
+[mqtt] event stored
+[mqtt] ready; subscribed topic=classroom/posture/events; mid=3
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored
+[mqtt] event stored

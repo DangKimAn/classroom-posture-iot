@@ -34,7 +34,7 @@
       <article class="metric-card metric-violet">
         <div class="metric-heading"><span>B) VỊ TRÍ CÓ DỮ LIỆU</span><span class="metric-icon">▦</span></div>
         <strong id="seat-count" class="metric-value">—</strong>
-        <div class="metric-caption">Vị trí có sự kiện mới nhất</div>
+        <div id="seat-snapshot-caption" class="metric-caption">Chưa nhận snapshot</div>
       </article>
       <article class="metric-card metric-amber">
         <div class="metric-heading"><span>SỰ KIỆN KHỚP BỘ LỌC</span><span class="metric-icon">◷</span></div>
@@ -56,10 +56,22 @@
           <div><h2>Trạng thái theo vị trí</h2><p>Cập nhật mới nhất cho từng mã ghế</p></div>
           <span class="panel-icon" aria-hidden="true">▦</span>
         </div>
-        <div id="seat-map" class="seat-map" aria-live="polite">
+        <p id="freshness-status" class="freshness-status" role="status" aria-live="polite">Đang chờ dữ liệu vị trí.</p>
+        <div id="seat-map" class="seat-map">
           <div class="empty-state"><span class="empty-icon">⌁</span><strong>Đang chờ dữ liệu</strong><p>Khi backend nhận sự kiện, trạng thái từng vị trí sẽ xuất hiện tại đây.</p></div>
         </div>
-        <div class="privacy-note"><span class="privacy-icon">◇</span><div><strong>Xử lý tôn trọng quyền riêng tư</strong><p>Dashboard chỉ nhận mã vị trí và kết quả tư thế; không hiển thị hoặc lưu ảnh/video.</p></div></div>
+        <section class="camera-panel" aria-labelledby="camera-title">
+          <div class="camera-heading"><div><h3 id="camera-title">Quan sát ESP32-CAM</h3><p>Preview MJPEG trực tiếp trong trình duyệt</p></div><span id="camera-status" class="camera-status" role="status" aria-live="polite">Đang tắt</span></div>
+          <form id="camera-form" class="camera-controls">
+            <label for="camera-url">URL stream</label>
+            <input id="camera-url" name="camera_url" type="url" inputmode="url" autocomplete="url" placeholder="http://192.168.1.105/stream" required>
+            <button id="camera-start" type="submit">Bắt đầu xem</button>
+            <button id="camera-stop" class="camera-stop" type="button" disabled>Dừng camera</button>
+          </form>
+          <p id="camera-help" class="camera-help">Nhập URL /stream của ESP32-CAM. Máy đang mở dashboard cần truy cập được camera qua mạng.</p>
+          <div id="camera-frame" class="camera-frame" hidden><img id="camera-preview" alt="Luồng hình ảnh trực tiếp từ ESP32-CAM" hidden></div>
+        </section>
+        <div class="privacy-note"><span class="privacy-icon">◇</span><div><strong>Xử lý tôn trọng quyền riêng tư</strong><p>Dashboard chỉ tải luồng ESP32-CAM trực tiếp vào trình duyệt sau khi bạn kết nối; không lưu ảnh/video xuống đĩa hay gửi frame lên backend.</p></div></div>
       </article>
 
       <article class="panel events-panel">
@@ -70,17 +82,23 @@
         <form id="filters" class="filters">
           <label class="seat-filter">Mã vị trí<input name="seat_id" list="seat-options" maxlength="32" placeholder="Tất cả vị trí"><datalist id="seat-options"></datalist></label>
           <div class="date-filters">
-            <label>Từ (UTC)<input name="from" type="datetime-local"></label>
-            <label>Đến (UTC)<input name="to" type="datetime-local"></label>
+            <label>Từ (giờ Việt Nam, GMT+7)<input name="from" type="datetime-local"></label>
+            <label>Đến (giờ Việt Nam, GMT+7)<input name="to" type="datetime-local"></label>
           </div>
           <div class="filter-actions"><button type="submit">Áp dụng lọc</button><button type="reset" class="reset-button" aria-label="Xóa bộ lọc">Xóa</button></div>
         </form>
-        <div id="history" class="event-list" aria-live="polite"><p class="empty-inline">Đang tải sự kiện…</p></div>
+        <div id="history" class="event-list"><p class="empty-inline">Đang tải sự kiện…</p></div>
+        <nav class="pagination" aria-label="Phân trang lịch sử sự kiện">
+          <button id="page-previous" type="button" aria-label="Trang trước" disabled>← Trước</button>
+          <span id="page-caption" aria-live="polite">Trang 1 / 1</span>
+          <button id="page-next" type="button" aria-label="Trang sau" disabled>Sau →</button>
+        </nav>
         <div class="panel-footer"><span id="history-caption">Đang tải dữ liệu</span><span class="refresh-indicator"><i></i> Làm mới mỗi 2 giây</span></div>
       </article>
     </section>
-    <footer class="page-footer"><span>HỆ THỐNG PHÁT HIỆN TƯ THẾ NGỒI · ĐỒ ÁN IoT</span><span>Dữ liệu thời gian UTC</span></footer>
+    <footer class="page-footer"><span>HỆ THỐNG PHÁT HIỆN TƯ THẾ NGỒI · ĐỒ ÁN IoT</span><span>Thời gian hiển thị GMT+7</span></footer>
   </main>
+  <script src="/dashboard_utils.js" defer></script>
   <script src="/app.js" defer></script>
 </body>
 </html>

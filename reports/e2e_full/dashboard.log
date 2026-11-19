@@ -1,0 +1,9 @@
+Dashboard server listening on 127.0.0.1:18080
+16/Nov/2026 21:41:27 127.0.0.1 GET / 200
+16/Nov/2026 21:41:27 127.0.0.1 GET /no-such-file File not found
+16/Nov/2026 21:41:27 127.0.0.1 GET /no-such-file 404
+16/Nov/2026 21:41:27 127.0.0.1 GET /api/events/latest 200
+16/Nov/2026 21:42:05 127.0.0.1 GET /api/events/latest 503
+16/Nov/2026 21:42:55 127.0.0.1 GET /api/events/latest 503
+16/Nov/2026 21:43:26 127.0.0.1 GET /api/events/latest Backend is unavailable
+16/Nov/2026 21:43:26 127.0.0.1 GET /api/events/latest 502

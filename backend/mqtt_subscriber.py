@@ -1,157 +1,62 @@
-"""MQTT subscriber with manual acknowledgements and bounded retry."""
+"""Điểm vào của MQTT subscriber: `python -m backend.mqtt_subscriber`.
 
-from dataclasses import dataclass
-from enum import Enum, auto
-import os
-import time
+Composition root: nạp cấu hình, áp dụng migration, rồi khởi động tầng interfaces.
+Không đặt logic ở đây.
+"""
+
+from collections import Counter
 from typing import Callable
 
 import psycopg
 
-try:
-    from .config import load_dotenv
-except ImportError:  # Direct execution from the backend directory.
-    from config import load_dotenv
+from backend.config import load_dotenv, mqtt_settings
+from backend.domain.errors import StorageRejectedError, StorageUnavailableError
+from backend.infrastructure.migrations import initialize
+from backend.interfaces import mqtt_consumer
+from backend.interfaces.mqtt_consumer import process_message as _process_message
+from backend.services.ingest_service import Outcome, ProcessResult
 
-load_dotenv()
-
-try:
-    from .database import initialize, insert_event
-    from .validator import decode_event_message
-except ImportError:  # Direct execution from the backend directory.
-    from database import initialize, insert_event
-    from validator import decode_event_message
-
-
-class Outcome(Enum):
-    STORED = auto()
-    DUPLICATE = auto()
-    INVALID = auto()
-    TEMPORARY = auto()
-    PERMANENT = auto()
-
-
-@dataclass(frozen=True)
-class ProcessResult:
-    outcome: Outcome
-    reason: str | None = None
-    error_type: str | None = None
-
-
-RETRY_DELAYS = (0.5, 1.0)
-RECONNECT_DELAY = 3.0
-MAX_ATTEMPTS = len(RETRY_DELAYS) + 1
-
-
-def handle_payload(
-    raw: bytes,
-    insert: Callable[[dict], bool] = insert_event,
-) -> ProcessResult:
-    """Validate and store one MQTT payload, classifying retryable errors."""
-    valid, reason, event = decode_event_message(raw)
-    if not valid:
-        return ProcessResult(Outcome.INVALID, reason=reason)
-    try:
-        if insert(event):
-            return ProcessResult(Outcome.STORED)
-        return ProcessResult(Outcome.DUPLICATE)
-    except (
-        psycopg.OperationalError,
-        psycopg.InterfaceError,
-        OSError,
-        TimeoutError,
-        ConnectionError,
-    ) as exc:
-        return ProcessResult(Outcome.TEMPORARY, error_type=type(exc).__name__)
-    except (psycopg.DataError, psycopg.IntegrityError) as exc:
-        return ProcessResult(Outcome.PERMANENT, error_type=type(exc).__name__)
-    except psycopg.Error as exc:
-        # Unknown database errors are retried to avoid losing a valid event.
-        return ProcessResult(Outcome.TEMPORARY, error_type=type(exc).__name__)
-    except Exception as exc:
-        # Unexpected storage errors fail closed and use the same bounded retry.
-        return ProcessResult(Outcome.TEMPORARY, error_type=type(exc).__name__)
+# Compatibility exports for callers migrating from the former single-file
+# subscriber implementation. Runtime startup still delegates to the interface.
+__all__ = ["Outcome", "ProcessResult", "process_message", "main"]
 
 
 def process_message(
     client,
     message,
-    insert: Callable[[dict], bool] = insert_event,
-    sleep: Callable[[float], None] = time.sleep,
+    insert: Callable[[dict], bool] | None = None,
+    sleep: Callable[[float], None] | None = None,
+    counters: Counter | None = None,
+    counter_lock=None,
 ) -> ProcessResult:
-    """Process serially, ACK completed messages, and reconnect on DB outages."""
-    result = ProcessResult(Outcome.TEMPORARY, error_type="UnknownError")
-    for attempt in range(MAX_ATTEMPTS):
-        result = handle_payload(message.payload, insert)
-        if result.outcome is not Outcome.TEMPORARY:
-            break
-        if attempt < len(RETRY_DELAYS):
-            sleep(RETRY_DELAYS[attempt])
+    """Keep the legacy injectable callback compatible with psycopg exceptions.
 
-    if result.outcome is Outcome.TEMPORARY:
-        print(f"[mqtt] storage unavailable after retries: {result.error_type}")
-        client.disconnect()
-        return result
+    Runtime ingestion translates these errors in the repository layer. Older
+    callers may inject an insert callback directly, so translate its database
+    exceptions here before delegating to the interface implementation.
+    """
+    if insert is not None:
+        legacy_insert = insert
 
-    if result.outcome is Outcome.INVALID:
-        print(f"[mqtt] rejected message: {result.reason}")
-    elif result.outcome is Outcome.PERMANENT:
-        print(f"[mqtt] permanently rejected message: {result.error_type}")
-    elif result.outcome is Outcome.STORED:
-        print("[mqtt] event stored")
-    else:
-        print("[mqtt] duplicate event ignored")
+        def insert(event):
+            try:
+                return legacy_insert(event)
+            except (psycopg.DataError, psycopg.IntegrityError) as exc:
+                raise StorageRejectedError(type(exc).__name__) from exc
+            except psycopg.Error as exc:
+                raise StorageUnavailableError(type(exc).__name__) from exc
 
-    ack_result = client.ack(message.mid, message.qos)
-    if ack_result != 0:
-        print(f"[mqtt] ACK failed: {ack_result}")
-        client.disconnect()
-    return result
+    kwargs = {"insert": insert, "counters": counters, "counter_lock": counter_lock}
+    if sleep is not None:
+        kwargs["sleep"] = sleep
+    return _process_message(client, message, **kwargs)
 
 
 def main() -> None:
-    try:
-        import paho.mqtt.client as mqtt
-    except ImportError as exc:
-        raise SystemExit("Install backend requirements before starting the MQTT subscriber") from exc
-
-    host = os.getenv("MQTT_HOST", "localhost")
-    port = int(os.getenv("MQTT_PORT", "1883"))
-    topic = os.getenv("MQTT_TOPIC", "classroom/posture/events")
-    username, password = os.getenv("MQTT_USERNAME", ""), os.getenv("MQTT_PASSWORD", "")
+    load_dotenv()
+    settings = mqtt_settings()
     initialize()
-
-    client = mqtt.Client(
-        mqtt.CallbackAPIVersion.VERSION2,
-        client_id="posture-backend",
-        clean_session=False,
-        manual_ack=True,
-    )
-    if username:
-        client.username_pw_set(username, password)
-
-    def on_connect(client, _userdata, _flags, reason_code, _properties=None):
-        if reason_code == 0:
-            client.subscribe(topic, qos=1)
-            print(f"[mqtt] connected; subscribed topic={topic}")
-        else:
-            print(f"[mqtt] connect failed: reason={reason_code}")
-
-    def on_disconnect(_client, _userdata, _flags, reason_code, _properties=None):
-        print(f"[mqtt] disconnected: reason={reason_code}; reconnect will be attempted")
-
-    def on_message(client, _userdata, message):
-        process_message(client, message)
-
-    client.on_connect, client.on_disconnect, client.on_message = on_connect, on_disconnect, on_message
-    while True:
-        try:
-            client.connect(host, port, keepalive=60)
-            client.loop_forever(retry_first_connection=True)
-        except OSError as exc:
-            print(f"[mqtt] broker unavailable: {type(exc).__name__}")
-        print(f"[mqtt] reconnecting in {RECONNECT_DELAY:g}s")
-        time.sleep(RECONNECT_DELAY)
+    mqtt_consumer.run(settings)
 
 
 if __name__ == "__main__":

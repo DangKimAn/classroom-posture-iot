@@ -1,0 +1,2 @@
+[mqtt] ready; subscribed topic=classroom/posture/events; mid=1
+[mqtt] rejected message: seat_id must be a 1-32 character location code

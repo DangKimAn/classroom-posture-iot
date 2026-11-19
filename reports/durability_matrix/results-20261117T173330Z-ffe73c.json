@@ -1,0 +1,19 @@
+{
+  "run_id": "20261117T173330Z-ffe73c",
+  "results": [
+    {
+      "interval_seconds": 30,
+      "scenario": "subscriber_offline",
+      "expected": 5,
+      "stored": 0,
+      "publish_seconds": 0.03
+    },
+    {
+      "interval_seconds": 30,
+      "scenario": "subscriber_online",
+      "expected": 5,
+      "stored": 5,
+      "publish_seconds": 0.006
+    }
+  ]
+}

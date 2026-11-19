@@ -1,0 +1,371 @@
+{
+  "run_id": "20261118T053413Z-05f7d26b",
+  "started_at_utc": "2026-11-18T05:34:13.868534+00:00",
+  "database_name": "test_perf_backend",
+  "environment": {
+    "python": "3.14.3",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "cpu_count": 12
+  },
+  "configuration": {
+    "seed_rows": 1000000,
+    "seat_count": 40,
+    "timespan_days": 7,
+    "query_iterations": 50,
+    "ingest_events_per_rate_and_mode": 100,
+    "target_rates_events_per_second": [
+      10,
+      40,
+      100
+    ]
+  },
+  "seed": {
+    "rows": 1000000,
+    "elapsed_seconds": 48.282,
+    "rows_per_second": 20711.637,
+    "time_range_utc": {
+      "from": "2026-11-11T05:34:15.312656+00:00",
+      "to": "2026-11-18T05:34:15.312656+00:00"
+    }
+  },
+  "planner_statistics_analyze_seconds": 1.079,
+  "queries": {
+    "latest_events": {
+      "p50_ms": 2476.023,
+      "p95_ms": 2957.534,
+      "mean_ms": 2511.949
+    },
+    "query_events": {
+      "p50_ms": 82.98,
+      "p95_ms": 95.303,
+      "mean_ms": 80.639
+    }
+  },
+  "explain_analyze_buffers": {
+    "latest_events": {
+      "Plan": {
+        "Node Type": "Limit",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Startup Cost": 88265.0,
+        "Total Cost": 207231.48,
+        "Plan Rows": 40,
+        "Plan Width": 115,
+        "Actual Startup Time": 1373.424,
+        "Actual Total Time": 2617.899,
+        "Actual Rows": 40,
+        "Actual Loops": 1,
+        "Shared Hit Blocks": 5568,
+        "Shared Read Blocks": 13104,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 16159,
+        "Temp Written Blocks": 16199,
+        "Plans": [
+          {
+            "Node Type": "Unique",
+            "Parent Relationship": "Outer",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Startup Cost": 88265.0,
+            "Total Cost": 207231.48,
+            "Plan Rows": 40,
+            "Plan Width": 115,
+            "Actual Startup Time": 1351.724,
+            "Actual Total Time": 2596.056,
+            "Actual Rows": 40,
+            "Actual Loops": 1,
+            "Shared Hit Blocks": 5568,
+            "Shared Read Blocks": 13104,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 16159,
+            "Temp Written Blocks": 16199,
+            "Plans": [
+              {
+                "Node Type": "Gather Merge",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 88265.0,
+                "Total Cost": 204731.48,
+                "Plan Rows": 1000000,
+                "Plan Width": 115,
+                "Actual Startup Time": 1351.72,
+                "Actual Total Time": 2371.188,
+                "Actual Rows": 1000000,
+                "Actual Loops": 1,
+                "Workers Planned": 2,
+                "Workers Launched": 2,
+                "Shared Hit Blocks": 5568,
+                "Shared Read Blocks": 13104,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 16159,
+                "Temp Written Blocks": 16199,
+                "Plans": [
+                  {
+                    "Node Type": "Sort",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Startup Cost": 87264.98,
+                    "Total Cost": 88306.65,
+                    "Plan Rows": 416667,
+                    "Plan Width": 115,
+                    "Actual Startup Time": 1273.047,
+                    "Actual Total Time": 1549.98,
+                    "Actual Rows": 333333,
+                    "Actual Loops": 3,
+                    "Sort Key": [
+                      "seat_id",
+                      "ts DESC",
+                      "id DESC"
+                    ],
+                    "Sort Method": "external merge",
+                    "Sort Space Used": 43280,
+                    "Sort Space Type": "Disk",
+                    "Shared Hit Blocks": 5568,
+                    "Shared Read Blocks": 13104,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 16159,
+                    "Temp Written Blocks": 16199,
+                    "Workers": [
+                      {
+                        "Worker Number": 0,
+                        "Sort Method": "external merge",
+                        "Sort Space Used": 43240,
+                        "Sort Space Type": "Disk"
+                      },
+                      {
+                        "Worker Number": 1,
+                        "Sort Method": "external merge",
+                        "Sort Space Used": 42752,
+                        "Sort Space Type": "Disk"
+                      }
+                    ],
+                    "Plans": [
+                      {
+                        "Node Type": "Seq Scan",
+                        "Parent Relationship": "Outer",
+                        "Parallel Aware": true,
+                        "Async Capable": false,
+                        "Relation Name": "posture_events",
+                        "Alias": "posture_events",
+                        "Startup Cost": 0.0,
+                        "Total Cost": 22734.67,
+                        "Plan Rows": 416667,
+                        "Plan Width": 115,
+                        "Actual Startup Time": 15.126,
+                        "Actual Total Time": 141.524,
+                        "Actual Rows": 333333,
+                        "Actual Loops": 3,
+                        "Shared Hit Blocks": 5464,
+                        "Shared Read Blocks": 13104,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Local Hit Blocks": 0,
+                        "Local Read Blocks": 0,
+                        "Local Dirtied Blocks": 0,
+                        "Local Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Workers": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "Planning": {
+        "Shared Hit Blocks": 189,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0
+      },
+      "Planning Time": 3.675,
+      "Triggers": [],
+      "JIT": {
+        "Functions": 8,
+        "Options": {
+          "Inlining": false,
+          "Optimization": false,
+          "Expressions": true,
+          "Deforming": true
+        },
+        "Timing": {
+          "Generation": 2.699,
+          "Inlining": 0.0,
+          "Optimization": 3.979,
+          "Emission": 62.422,
+          "Total": 69.1
+        }
+      },
+      "Execution Time": 2681.003
+    },
+    "query_events": {
+      "Plan": {
+        "Node Type": "Limit",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Startup Cost": 0.42,
+        "Total Cost": 5.38,
+        "Plan Rows": 100,
+        "Plan Width": 107,
+        "Actual Startup Time": 0.044,
+        "Actual Total Time": 0.14,
+        "Actual Rows": 100,
+        "Actual Loops": 1,
+        "Shared Hit Blocks": 8,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0,
+        "Plans": [
+          {
+            "Node Type": "Index Scan",
+            "Parent Relationship": "Outer",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Scan Direction": "Backward",
+            "Index Name": "idx_posture_events_ts",
+            "Relation Name": "posture_events",
+            "Alias": "posture_events",
+            "Startup Cost": 0.42,
+            "Total Cost": 49551.43,
+            "Plan Rows": 1000000,
+            "Plan Width": 107,
+            "Actual Startup Time": 0.042,
+            "Actual Total Time": 0.122,
+            "Actual Rows": 100,
+            "Actual Loops": 1,
+            "Index Cond": "((ts >= '2026-11-11 05:34:15.312656+00'::timestamp with time zone) AND (ts <= '2026-11-18 05:34:15.312656+00'::timestamp with time zone))",
+            "Rows Removed by Index Recheck": 0,
+            "Shared Hit Blocks": 8,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0
+          }
+        ]
+      },
+      "Planning": {
+        "Shared Hit Blocks": 19,
+        "Shared Read Blocks": 0,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0
+      },
+      "Planning Time": 0.541,
+      "Triggers": [],
+      "Execution Time": 0.186
+    }
+  },
+  "ingest": [
+    {
+      "connection_mode": "connect_per_event",
+      "target_events_per_second": 10,
+      "events": 100,
+      "elapsed_seconds": 9.949,
+      "actual_events_per_second": 10.051,
+      "p50_ms": 75.052,
+      "p95_ms": 108.954,
+      "mean_ms": 79.594
+    },
+    {
+      "connection_mode": "reuse_one_connection",
+      "target_events_per_second": 10,
+      "events": 100,
+      "elapsed_seconds": 9.919,
+      "actual_events_per_second": 10.082,
+      "p50_ms": 20.163,
+      "p95_ms": 25.025,
+      "mean_ms": 20.343
+    },
+    {
+      "connection_mode": "reuse_one_connection",
+      "target_events_per_second": 40,
+      "events": 100,
+      "elapsed_seconds": 2.49,
+      "actual_events_per_second": 40.166,
+      "p50_ms": 17.745,
+      "p95_ms": 29.417,
+      "mean_ms": 18.875
+    },
+    {
+      "connection_mode": "connect_per_event",
+      "target_events_per_second": 40,
+      "events": 100,
+      "elapsed_seconds": 6.74,
+      "actual_events_per_second": 14.837,
+      "p50_ms": 67.038,
+      "p95_ms": 86.045,
+      "mean_ms": 67.241
+    },
+    {
+      "connection_mode": "connect_per_event",
+      "target_events_per_second": 100,
+      "events": 100,
+      "elapsed_seconds": 5.544,
+      "actual_events_per_second": 18.038,
+      "p50_ms": 53.231,
+      "p95_ms": 86.282,
+      "mean_ms": 55.31
+    },
+    {
+      "connection_mode": "reuse_one_connection",
+      "target_events_per_second": 100,
+      "events": 100,
+      "elapsed_seconds": 1.657,
+      "actual_events_per_second": 60.346,
+      "p50_ms": 15.999,
+      "p95_ms": 19.682,
+      "mean_ms": 15.731
+    }
+  ],
+  "cleanup": {
+    "seed_rows_deleted": 1000600
+  },
+  "finished_at_utc": "2026-11-18T05:37:55.884004+00:00"
+}
