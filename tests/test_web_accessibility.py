@@ -23,7 +23,24 @@ def test_empty_dashboard_meters_have_valid_nonzero_range():
     assert all(int(meter["aria-valuemax"]) >= 1 for meter in parser.meters)
 
 
-def test_meter_updates_keep_maximum_at_least_one_and_guard_empty_width():
+def test_dynamic_lists_are_not_live_regions_but_status_is():
+    markup = (ROOT / "web/index.html").read_text(encoding="utf-8")
+    assert 'id="seat-map" class="seat-map" aria-live' not in markup
+    assert 'id="history" class="event-list" aria-live' not in markup
+    assert 'id="freshness-status" class="freshness-status" role="status" aria-live="polite"' in markup
+    assert 'id="page-caption" aria-live="polite"' in markup
+
+
+def test_dashboard_keeps_esp32_stream_controls_without_laptop_webcam():
+    markup = (ROOT / "web/index.html").read_text(encoding="utf-8")
     script = (ROOT / "web/app.js").read_text(encoding="utf-8")
-    assert "Math.max(1, items.length)" in script
-    assert "items.length ? `${count / items.length * 100}%` : '0%'" in script
+    styles = (ROOT / "web/style.css").read_text(encoding="utf-8")
+
+    assert 'id="camera-url"' in markup
+    assert 'id="camera-start"' in markup
+    assert 'id="camera-stop"' in markup
+    assert 'id="camera-preview"' in markup
+    assert "camera-laptop" not in markup + script
+    assert "getUserMedia" not in script
+    assert "camera-webcam" not in markup + script + styles
+    assert ".camera-frame video" not in styles
